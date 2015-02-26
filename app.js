@@ -1,39 +1,64 @@
-var req     = require('request');
+/* Dependencies */
+var request = require('request');
 var cheerio = require('cheerio');
-var mysql   = require('mysql');
-var league  = process.argv[2] || null;
-var baseUrl = 'http://fantasy.nfl.com/league/' + league + '/history';
 
-if (league === null) {
-  console.warn('No league id supplied. e.g. `node app.js 12345`');
-  return false;
+/* Required vars */
+/* We have to have a league ID for anything to work */
+var leagueId  = process.argv[2] || null;
+var baseUrl = 'http://fantasy.nfl.com/league/' + leagueId + '/history';
+var methods = [];
+var scrapeOptions = {
+  almanac: almanac,
+  standings: seasonStandings,
+  draft: seasonDraftResults,
+  trades: trades,
+  owners: owners
+};
+
+if (null === leagueId) {
+  throw new Error('No league id supplied. e.g. `node app.js 12345`');
 }
 
-var connection = mysql.createConnection({
-  host     : 'localhost',
-  user     : 'root',
-  password : '',
-  database: 'fantasee'
+if (undefined === process.argv[3]) {
+  console.warn('No scrape methods supplied. e.g. `node app.js 12345 standings draft`');
+  methods.push('all');
+}
+
+process.argv.forEach(function (arg, i) {
+  if (i >= 3) {
+    methods.push(arg);
+  }
 });
 
-// insert league to db
-connection.connect();
 
-connection.query('INSERT IGNORE INTO `league` SET `league_id` = ' + league, function(err, rows, fields) {
-  if (err) throw err;
-  var rowId = rows.insertId ? rows.insertId : 'league already exists';
-  console.log('League ' + league + ' added with id: ' + rowId);
-});
+(function getSeasonsAndGo() {
+  var seasons = [];
+  request(baseUrl, function (error, response, body) {
+    if (!error && response.statusCode == 200) {
+      var $ = cheerio.load(body);
 
-connection.end();
+      $('#historySeasonNav .st-menu a[href]').each(function (i, e) {
+        var year = parseInt($(e).text());
+        seasons.push(year);
+      });
+
+      methods.forEach(function (scrape, i) {
+        if(scrapeOptions.hasOwnProperty(scrape)) {
+          scrapeOptions[scrape](seasons);
+        }
+      });
+    }
+  });
+}());
+
 
 function almanac() {
-  req(baseUrl, function (error, response, body) {
+  request(baseUrl, function (error, response, body) {
     if (!error && response.statusCode == 200) {
       var $ = cheerio.load(body);
       var seasons = [];
 
-      $('[class*="history-champ"]').each(function (i, e) {
+      $('#leagueHistoryAlmanac [class*="history-champ"]').each(function (i, e) {
         var $row = $(e);
         var year = $row.find('.historySeason').text();
         var team = $row.find('.historyTeam .teamName').text();
@@ -41,7 +66,7 @@ function almanac() {
         console.log(year + ' Champion: ' + team);
       });
 
-      $('[class*="history-btw"]').each(function (i, e) {
+      $('#leagueHistoryAlmanac [class*="history-btw"]').each(function (i, e) {
         var $row = $(e);
         var year = $row.find('.historySeason').text();
         var week = $row.find('.historyWeek').text();
@@ -50,7 +75,7 @@ function almanac() {
         console.log(year + ' Weekly Points Winner: ' + team + ' with ' + points + ' points in week ' + week);
       });
 
-      $('[class*="history-bpw"]').each(function (i, e) {
+      $('#leagueHistoryAlmanac [class*="history-bpw"]').each(function (i, e) {
         var $row = $(e);
         var year = $row.find('.historySeason').text();
         var week = $row.find('.historyWeek').text();
@@ -61,23 +86,20 @@ function almanac() {
         console.log(year + ' Weekly Player Points Winner: ' + team + ' with ' + player + ' (' + posTeam + ') with ' + points + ' points in week ' + week);
       });
 
-      $('[class*="history-bts"]').each(function (i, e) {
+      $('#leagueHistoryAlmanac [class*="history-bts"]').each(function (i, e) {
         var $row = $(e);
         var year = $row.find('.historySeason').text();
         var team = $row.find('.historyTeam .teamName').text();
         var points = $row.find('.historyPts').text();
         console.log(year + ' Season Points Winner: ' + team + ' with ' + points + ' points');
       });
-
-      seasonStandings(seasons);
-      seasonDraftResults(seasons);
     }
   });
 }
 
 function seasonStandings(seasons) {
     seasons.forEach(function (season, i) {
-      req(baseUrl + '/' + season + '/standings', function (error, response, body) {
+      request(baseUrl + '/' + season + '/standings', function (error, response, body) {
         if (!error && response.statusCode == 200) {
           var $ = cheerio.load(body);
           console.log(season + ' season');
@@ -94,7 +116,7 @@ function seasonStandings(seasons) {
 
 function seasonDraftResults(seasons) {
   seasons.forEach(function (season, i) {
-    req(baseUrl + '/' + season + '/draftresults?draftResultsDetail=0&draftResultsTab=round&draftResultsType=results', function (error, response, body) {
+    request(baseUrl + '/' + season + '/draftresults?draftResultsDetail=0&draftResultsTab=round&draftResultsType=results', function (error, response, body) {
       if (!error && response.statusCode == 200) {
         var $ = cheerio.load(body);
         console.log(season + ' season draft');
@@ -111,9 +133,73 @@ function seasonDraftResults(seasons) {
           });
         });
       }
+    });
   });
-});
 }
 
-// Run it
-almanac();
+function owners(seasons) {
+  seasons.forEach(function (season, i) {
+    request(baseUrl + '/' + season + '/owners', function (error, response, body) {
+      if (!error && response.statusCode == 200) {
+        console.log(season);
+        var $ = cheerio.load(body);
+        $('#leagueOwners .tableWrap tbody tr').each(function (i, e) {
+          var $row = $(e);
+          var owner = $row.find('.teamOwnerName').text();
+          var ownerId = ($row.find('[class*="userId-"]').attr('class')).replace(/(\D)*/, '');
+          var ownerTeamName = $row.find('.teamName').text();
+          console.log(owner + ' (' + ownerId + ') : ' + ownerTeamName);
+        });
+      }
+    });
+  });
+}
+
+/*
+ Trades are complex.
+ They are not grouped together on the page, each teams side of the trade is in its own
+ <tr>, they are grouped by a common class 'transaction-trade-XXXX-Y'
+ XXXX is the unique id of the trade in this league,
+ Y is a number between 1 and 4 which corresponds to:
+ 1: Team who offered the trade
+ 2: Team who accepted the trade
+ 3: Any players Team 1 had to drop in the process of completing the trade
+ 4: Any players Team 2 had to drop in the process of completing the trade
+ */
+function trades(seasons) {
+  var tradeObj = {};
+  seasons = ['2014'];
+  seasons.forEach(function (season, i) {
+    request(baseUrl + '/' + season + '/transactions?transactionType=trade', function (error, response, body) {
+      if (!error && response.statusCode == 200) {
+        var $ = cheerio.load(body);
+        $('#leagueTransactions .tableWrap tbody > [class*="transaction-trade-"]').each(function (i, e) {
+          var $row = $(e);
+          // ignore the dropped players for now, we're only interested in "status" 1 and 2
+          var tradeId = $(e).attr('class').match(/transaction-trade-(.*?)-[12]/);
+
+          if (null !== tradeId) {
+            tradeId = tradeId[1];
+            tradeObj[tradeId] = tradeObj[tradeId] || {};
+            var players = [];
+            var date = $row.find('.transactionDate').text();
+            var team = $row.find('.transactionFrom .teamName').text();
+            var teamId = $row.find('.transactionFrom .teamName').attr('class').replace(/(\D)*/, '');
+            $row.find('.playerNameAndInfo li').each(function (i, el) {
+              players.push($(el).find('.playerName').text());
+            });
+            var data = {
+                players: players,
+                date: date,
+                team: teamId
+            };
+
+            tradeObj[tradeId][teamId] = data;
+          }
+        });
+
+        console.log(tradeObj);
+      }
+    });
+  });
+}
