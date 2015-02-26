@@ -178,24 +178,27 @@ function trades(seasons) {
           // ignore the dropped players for now, we're only interested in "status" 1 and 2
           var tradeId = $(e).attr('class').match(/transaction-trade-(.*?)-[12]/);
 
-          if (null !== tradeId) {
-            tradeId = tradeId[1];
-            tradeObj[tradeId] = tradeObj[tradeId] || {};
-            var players = [];
-            var date = $row.find('.transactionDate').text();
-            var team = $row.find('.transactionFrom .teamName').text();
-            var teamId = $row.find('.transactionFrom .teamName').attr('class').replace(/(\D)*/, '');
-            $row.find('.playerNameAndInfo li').each(function (i, el) {
-              players.push($(el).find('.playerName').text());
-            });
-            var data = {
-                players: players,
-                date: date,
-                team: teamId
-            };
-
-            tradeObj[tradeId][teamId] = data;
+          if (null === tradeId) {
+            return;
           }
+          
+          tradeId = tradeId[1];
+          tradeObj[tradeId] = tradeObj[tradeId] || {};
+          var players = [];
+          var date = $row.find('.transactionDate').text();
+          var team = $row.find('.transactionFrom .teamName').text();
+          var teamId = $row.find('.transactionFrom .teamName').attr('class').replace(/(\D)*/, '');
+          $row.find('.playerNameAndInfo li').each(function (i, el) {
+            players.push($(el).find('.playerName').text());
+          });
+          var data = {
+              players: players,
+              date: date,
+              team: teamId
+          };
+
+          tradeObj[tradeId][teamId] = data;
+
         });
 
         console.log(tradeObj);
