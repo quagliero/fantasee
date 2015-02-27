@@ -167,11 +167,11 @@ function owners(seasons) {
  4: Any players Team 2 had to drop in the process of completing the trade
  */
 function trades(seasons) {
-  var tradeObj = {};
-  seasons = ['2014'];
+
   seasons.forEach(function (season, i) {
     request(baseUrl + '/' + season + '/transactions?transactionType=trade', function (error, response, body) {
       if (!error && response.statusCode == 200) {
+        var tradeObj = {};
         var $ = cheerio.load(body);
         $('#leagueTransactions .tableWrap tbody > [class*="transaction-trade-"]').each(function (i, e) {
           var $row = $(e);
@@ -181,9 +181,9 @@ function trades(seasons) {
           if (null === tradeId) {
             return;
           }
-          
-          tradeId = tradeId[1];
-          tradeObj[tradeId] = tradeObj[tradeId] || {};
+
+          tradeId = season + '_' + tradeId[1];
+          tradeObj[tradeId] = tradeObj[tradeId] || [];
           var players = [];
           var date = $row.find('.transactionDate').text();
           var team = $row.find('.transactionFrom .teamName').text();
@@ -192,17 +192,24 @@ function trades(seasons) {
             players.push($(el).find('.playerName').text());
           });
           var data = {
-              players: players,
-              date: date,
-              team: teamId
+            players: players,
+            date: date,
+            team: teamId,
+            teamName: team
           };
-
-          tradeObj[tradeId][teamId] = data;
-
+          tradeObj[tradeId].push(data);
         });
+        console.log(season);
+        for (var trade in tradeObj) {
+          if (tradeObj.hasOwnProperty(trade)) {
+            var team1 = tradeObj[trade][0];
+            var team2 = tradeObj[trade][1];
+            console.log('Trade ' + trade + ': ' + team1.teamName + ' traded ' + team1.players.join(', ') + ' TO ' + team2.teamName + ' for ' + team2.players.join(', ') + ' ON ' + team1.date);
+          }
+        }
 
-        console.log(tradeObj);
       }
     });
+
   });
 }
