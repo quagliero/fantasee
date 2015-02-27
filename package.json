@@ -1,0 +1,35 @@
+{
+  "name": "fantasee",
+  "version": "0.1.0",
+  "description": "See more from your nfl.com fantasy league",
+  "main": "app.js",
+  "dependencies": {
+    "cheerio": "^0.18.0",
+    "request": "^2.53.0"
+  },
+  "devDependencies": {
+    "mocha": "^2.1.0"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/quagliero/fantasee.git"
+  },
+  "keywords": [
+    "node",
+    "scrape",
+    "fantasy",
+    "football",
+    "fantasy",
+    "football",
+    "nfl"
+  ],
+  "author": "@quagliero",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/quagliero/fantasee/issues"
+  },
+  "homepage": "https://github.com/quagliero/fantasee"
+}
