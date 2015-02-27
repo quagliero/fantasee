@@ -7,21 +7,14 @@ var cheerio = require('cheerio');
 var leagueId  = process.argv[2] || null;
 var baseUrl = 'http://fantasy.nfl.com/league/' + leagueId + '/history';
 var methods = [];
-var scrapeOptions = {
-  almanac: almanac,
-  standings: seasonStandings,
-  draft: seasonDraftResults,
-  trades: trades,
-  owners: owners
-};
+
 
 if (null === leagueId) {
   throw new Error('No league id supplied. e.g. `node app.js 12345`');
 }
 
 if (undefined === process.argv[3]) {
-  console.warn('No scrape methods supplied. e.g. `node app.js 12345 standings draft`');
-  methods.push('all');
+  console.warn('No scrape methods supplied. Will run all.');
 }
 
 process.argv.forEach(function (arg, i) {
@@ -30,30 +23,65 @@ process.argv.forEach(function (arg, i) {
   }
 });
 
+var Scraper = function(leagueId, baseUrl, methods) {
+  this.leagueId = leagueId;
+  this.baseUrl = baseUrl;
+  this.methodsToRun = methods;
+  this.seasons = [];
 
-(function getSeasonsAndGo() {
-  var seasons = [];
-  request(baseUrl, function (error, response, body) {
-    if (!error && response.statusCode == 200) {
-      var $ = cheerio.load(body);
-
-      $('#historySeasonNav .st-menu a[href]').each(function (i, e) {
-        var year = parseInt($(e).text());
-        seasons.push(year);
-      });
-
-      methods.forEach(function (scrape, i) {
-        if(scrapeOptions.hasOwnProperty(scrape)) {
-          scrapeOptions[scrape](seasons);
-        }
-      });
-    }
+  var that = this;
+  this.getSeasonsPromise = new Promise(function(resolve, reject) {
+    request(that.baseUrl, function (error, response, body) {
+      if (!error && response.statusCode == 200) {
+        var $ = cheerio.load(body);
+        $('#historySeasonNav .st-menu a[href]').each(function (i, e) {
+          var year = parseInt($(e).text());
+          that.seasons.push(year);
+        });
+        resolve(that.seasons);
+      } else {
+        reject(Error('Not found'));
+      }
+    });
   });
-}());
+};
 
 
-function almanac() {
-  request(baseUrl, function (error, response, body) {
+Scraper.prototype.init = function () {
+  var that = this;
+  if (this.seasons.length > 0) {
+    this.fireScraper(that.seasons);
+  } else {
+    this.getSeasonsPromise.then(function (seasons) {
+      that.fireScraper(seasons);
+    }, function(err) {
+      console.log(err);
+    });
+  }
+};
+
+Scraper.prototype.fireScraper = function (seasons) {
+  var that = this;
+
+  // If we've got no methods passed in, run everything cuz whaaa
+  if (that.methodsToRun.length === 0) {
+    for (var method in that.Scrape) {
+      that.Scrape[method].call(that, seasons);
+    }
+  } else {
+    that.methodsToRun.forEach(function (method) {
+      if(that.Scrape[method] && typeof that.Scrape[method] === 'function') {
+        that.Scrape[method].call(that, seasons);
+      }
+    });
+  }
+};
+
+var ScrapeAPI = {};
+
+ScrapeAPI.almanac = function () {
+  var that = this;
+  request(that.baseUrl, function (error, response, body) {
     if (!error && response.statusCode == 200) {
       var $ = cheerio.load(body);
       var seasons = [];
@@ -95,11 +123,12 @@ function almanac() {
       });
     }
   });
-}
+};
 
-function seasonStandings(seasons) {
+ScrapeAPI.seasonStandings = function (seasons) {
+  var that = this;
     seasons.forEach(function (season, i) {
-      request(baseUrl + '/' + season + '/standings', function (error, response, body) {
+      request(that.baseUrl + '/' + season + '/standings', function (error, response, body) {
         if (!error && response.statusCode == 200) {
           var $ = cheerio.load(body);
           console.log(season + ' season');
@@ -112,11 +141,12 @@ function seasonStandings(seasons) {
         }
     });
   });
-}
+};
 
-function seasonDraftResults(seasons) {
+ScrapeAPI.seasonDraftResults = function (seasons) {
+  var that = this;
   seasons.forEach(function (season, i) {
-    request(baseUrl + '/' + season + '/draftresults?draftResultsDetail=0&draftResultsTab=round&draftResultsType=results', function (error, response, body) {
+    request(that.baseUrl + '/' + season + '/draftresults?draftResultsDetail=0&draftResultsTab=round&draftResultsType=results', function (error, response, body) {
       if (!error && response.statusCode == 200) {
         var $ = cheerio.load(body);
         console.log(season + ' season draft');
@@ -132,16 +162,18 @@ function seasonDraftResults(seasons) {
             console.log('Pick ' + pick + ': ' + player + ' TO ' + team);
           });
         });
+      } else {
+        console.log(error);
       }
     });
   });
-}
+};
 
-function owners(seasons) {
+ScrapeAPI.owners = function (seasons) {
+  var that = this;
   seasons.forEach(function (season, i) {
-    request(baseUrl + '/' + season + '/owners', function (error, response, body) {
+    request(that.baseUrl + '/' + season + '/owners', function (error, response, body) {
       if (!error && response.statusCode == 200) {
-        console.log(season);
         var $ = cheerio.load(body);
         $('#leagueOwners .tableWrap tbody tr').each(function (i, e) {
           var $row = $(e);
@@ -153,7 +185,7 @@ function owners(seasons) {
       }
     });
   });
-}
+};
 
 /*
  Trades are complex.
@@ -167,12 +199,13 @@ function owners(seasons) {
  4: Any players Team 2 had to drop in the process of completing the trade
  */
 
-function trades(seasons, pagination) {
+ ScrapeAPI.trades = function (seasons, pagination) {
+  var that = this;
   var tradeObj = {};
   var urlParams = pagination || '?transactionType=trade';
-
+  
   seasons.forEach(function (season, i) {
-    request(baseUrl + '/' + season + '/transactions' + urlParams, function (error, response, body) {
+    request(that.baseUrl + '/' + season + '/transactions' + urlParams, function (error, response, body) {
       if (!error && response.statusCode == 200) {
         var tradeObj = {};
         var $ = cheerio.load(body);
@@ -217,11 +250,15 @@ function trades(seasons, pagination) {
 
         if (undefined !== next) {
           // we have a next link, recursion!
-          trades([season], next);
+          that.Scrape.trades([season], next);
         }
 
       }
     });
-
   });
-}
+};
+
+Scraper.prototype.Scrape = ScrapeAPI;
+
+var scrapeSession = new Scraper(leagueId, baseUrl, methods);
+scrapeSession.init();
