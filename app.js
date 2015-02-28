@@ -1,36 +1,38 @@
+(function (module) {
+
+
 /* Dependencies */
 var request = require('request');
 var cheerio = require('cheerio');
 
 /* Required vars */
 /* We have to have a league ID for anything to work */
-var leagueId  = process.argv[2] || null;
-var baseUrl = 'http://fantasy.nfl.com/league/' + leagueId + '/history';
-var methods = [];
-
-
-if (null === leagueId) {
-  throw new Error('No league id supplied. e.g. `node app.js 12345`');
-}
-
-if (undefined === process.argv[3]) {
-  console.warn('No scrape methods supplied. Will run all.');
-}
+var config = {
+  leagueId: process.argv[2] || null,
+  methods: []
+};
 
 process.argv.forEach(function (arg, i) {
   if (i >= 3) {
-    methods.push(arg);
+    config.methods.push(arg);
   }
 });
 
-var Scraper = function(leagueId, baseUrl, methods) {
-  this.leagueId = leagueId;
-  this.baseUrl = baseUrl;
-  this.methodsToRun = methods;
-  this.seasons = [];
+var Scraper = function(config) {
+  config = config || {};
+  if (!config.leagueId) {
+    throw new Error('No league id supplied to constructor');
+  }
 
+  this.leagueId = config.leagueId;
+  this.baseUrl = config.baseUrl || 'http://fantasy.nfl.com/league/' + this.leagueId + '/history';
+  this.methodsToRun = config.methods;
+  this.seasons = [];
+};
+
+Scraper.prototype.getSeasonsPromise = function () {
   var that = this;
-  this.getSeasonsPromise = new Promise(function(resolve, reject) {
+  return new Promise(function(resolve, reject) {
     request(that.baseUrl, function (error, response, body) {
       if (!error && response.statusCode == 200) {
         var $ = cheerio.load(body);
@@ -46,13 +48,12 @@ var Scraper = function(leagueId, baseUrl, methods) {
   });
 };
 
-
 Scraper.prototype.init = function () {
   var that = this;
   if (this.seasons.length > 0) {
     this.fireScraper(that.seasons);
   } else {
-    this.getSeasonsPromise.then(function (seasons) {
+    this.getSeasonsPromise().then(function (seasons) {
       that.fireScraper(seasons);
     }, function(err) {
       console.log(err);
@@ -65,6 +66,7 @@ Scraper.prototype.fireScraper = function (seasons) {
 
   // If we've got no methods passed in, run everything cuz whaaa
   if (that.methodsToRun.length === 0) {
+    console.warn('No scrape methods supplied. Will run all.');
     for (var method in that.Scrape) {
       that.Scrape[method].call(that, seasons);
     }
@@ -203,7 +205,7 @@ ScrapeAPI.owners = function (seasons) {
   var that = this;
   var tradeObj = {};
   var urlParams = pagination || '?transactionType=trade';
-  
+
   seasons.forEach(function (season, i) {
     request(that.baseUrl + '/' + season + '/transactions' + urlParams, function (error, response, body) {
       if (!error && response.statusCode == 200) {
@@ -259,6 +261,9 @@ ScrapeAPI.owners = function (seasons) {
 };
 
 Scraper.prototype.Scrape = ScrapeAPI;
+module.exports = Scraper;
 
-var scrapeSession = new Scraper(leagueId, baseUrl, methods);
+var scrapeSession = new Scraper(config);
 scrapeSession.init();
+
+}(module));

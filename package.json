@@ -8,10 +8,11 @@
     "request": "^2.53.0"
   },
   "devDependencies": {
+    "chai": "^2.1.0",
     "mocha": "^2.1.0"
   },
   "scripts": {
-    "test": "mocha"
+    "test": "mocha -u tdd"
   },
   "repository": {
     "type": "git",
