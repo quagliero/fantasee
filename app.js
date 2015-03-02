@@ -26,11 +26,11 @@ var Scraper = function(config) {
 
   this.leagueId = config.leagueId;
   this.baseUrl = config.baseUrl || 'http://fantasy.nfl.com/league/' + this.leagueId + '/history';
-  this.methodsToRun = config.methods;
-  this.seasons = [];
+  this.methodsToRun = config.methods || [];
+  this.seasons = config.seasons || [];
 };
 
-Scraper.prototype.getSeasonsPromise = function () {
+Scraper.prototype.getSeasons = function () {
   var that = this;
   return new Promise(function(resolve, reject) {
     request(that.baseUrl, function (error, response, body) {
@@ -53,7 +53,7 @@ Scraper.prototype.init = function () {
   if (this.seasons.length > 0) {
     this.fireScraper(that.seasons);
   } else {
-    this.getSeasonsPromise().then(function (seasons) {
+    this.getSeasons().then(function (seasons) {
       that.fireScraper(seasons);
     }, function(err) {
       console.log(err);
@@ -67,9 +67,9 @@ Scraper.prototype.fireScraper = function (seasons) {
   // If we've got no methods passed in, run everything cuz whaaa
   if (that.methodsToRun.length === 0) {
     console.warn('No scrape methods supplied. Will run all.');
-    for (var method in that.Scrape) {
-      that.Scrape[method].call(that, seasons);
-    }
+    Object.keys(that.Scrape).forEach(function (key) {
+      that.Scrape[key].call(that, seasons);
+    });
   } else {
     that.methodsToRun.forEach(function (method) {
       if(that.Scrape[method] && typeof that.Scrape[method] === 'function') {
