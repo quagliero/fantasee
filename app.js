@@ -252,7 +252,7 @@ ScrapeAPI.owners = function (seasons) {
 
         if (undefined !== next) {
           // we have a next link, recursion!
-          that.Scrape.trades([season], next);
+          that.Scrape.trades.call(that, [season], next);
         }
 
       }
