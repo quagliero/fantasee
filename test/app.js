@@ -1,8 +1,12 @@
 var chai = require('chai');
+var sinon = require('sinon');
+var sinonChai = require('sinon-chai');
 var Scraper = require('../app.js');  // our module
 
 var expect = chai.expect;
 var s;
+
+chai.use(sinonChai);
 
 describe('Scraper', function () {
 
@@ -68,6 +72,9 @@ describe('Scraper', function () {
   });
 
   describe('#init()', function () {
+    var fireScraper = sinon.spy(Scraper.prototype, 'fireScraper');
+    var getSeasons = sinon.spy(Scraper.prototype, 'getSeasons');
+
     it('should exist', function () {
       expect(s.init).to.be.a('function');
     });
@@ -76,16 +83,16 @@ describe('Scraper', function () {
       expect(s).to.respondTo('init');
     });
 
-    // @TODO next
-    // Need Sinon-Chai
-    // http://chaijs.com/plugins/sinon-chai
-    // it('should call the #fireScraper method if we have seasons', function () {
-    //
-    // });
-    //
-    // it('should call the #getSeasons method if we have no seasons', function () {
-    //
-    // });
+    it('should call the #fireScraper method if we have seasons', function () {
+      s.init();
+      expect(fireScraper).to.have.been.called;
+    });
+
+    it('should call the #getSeasons method if we have no seasons', function () {
+      var x = new Scraper({leagueId: 874089});
+      x.init();
+      expect(getSeasons).to.have.been.called;
+    });
   });
 
 });
