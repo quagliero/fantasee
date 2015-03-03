@@ -37,8 +37,8 @@ Scraper.prototype.getSeasons = function () {
     request(that.baseUrl, function (error, response, body) {
       if (!error && response.statusCode == 200) {
         var $ = cheerio.load(body);
-        $('#historySeasonNav .st-menu a[href]').each(function (i, e) {
-          var year = parseInt($(e).text());
+        $('#historySeasonNav .st-menu a[href]').each(function (i, el) {
+          var year = parseInt($(el).text());
           that.seasons.push(year);
         });
         if (that.seasons.length === 0) {
@@ -93,16 +93,16 @@ ScrapeAPI.almanac = function () {
       var $ = cheerio.load(body);
       var seasons = [];
 
-      $('#leagueHistoryAlmanac [class*="history-champ"]').each(function (i, e) {
-        var $row = $(e);
+      $('#leagueHistoryAlmanac [class*="history-champ"]').each(function (i, el) {
+        var $row = $(el);
         var year = $row.find('.historySeason').text();
         var team = $row.find('.historyTeam .teamName').text();
         seasons.push(year);
         console.log(year + ' Champion: ' + team);
       });
 
-      $('#leagueHistoryAlmanac [class*="history-btw"]').each(function (i, e) {
-        var $row = $(e);
+      $('#leagueHistoryAlmanac [class*="history-btw"]').each(function (i, el) {
+        var $row = $(el);
         var year = $row.find('.historySeason').text();
         var week = $row.find('.historyWeek').text();
         var team = $row.find('.historyTeam .teamName').text();
@@ -110,8 +110,8 @@ ScrapeAPI.almanac = function () {
         console.log(year + ' Weekly Points Winner: ' + team + ' with ' + points + ' points in week ' + week);
       });
 
-      $('#leagueHistoryAlmanac [class*="history-bpw"]').each(function (i, e) {
-        var $row = $(e);
+      $('#leagueHistoryAlmanac [class*="history-bpw"]').each(function (i, el) {
+        var $row = $(el);
         var year = $row.find('.historySeason').text();
         var week = $row.find('.historyWeek').text();
         var team = $row.find('.historyTeam .teamName').text();
@@ -121,8 +121,8 @@ ScrapeAPI.almanac = function () {
         console.log(year + ' Weekly Player Points Winner: ' + team + ' with ' + player + ' (' + posTeam + ') with ' + points + ' points in week ' + week);
       });
 
-      $('#leagueHistoryAlmanac [class*="history-bts"]').each(function (i, e) {
-        var $row = $(e);
+      $('#leagueHistoryAlmanac [class*="history-bts"]').each(function (i, el) {
+        var $row = $(el);
         var year = $row.find('.historySeason').text();
         var team = $row.find('.historyTeam .teamName').text();
         var points = $row.find('.historyPts').text();
@@ -139,8 +139,8 @@ ScrapeAPI.seasonStandings = function (seasons) {
         if (!error && response.statusCode == 200) {
           var $ = cheerio.load(body);
           console.log(season + ' season');
-          $('#finalStandings #championResults .results li').each(function (i, e) {
-            var $row = $(e);
+          $('#finalStandings #championResults .results li').each(function (i, el) {
+            var $row = $(el);
             var pos = i += 1;
             var team = $row.find('.teamName').text();
             console.log(pos + ' : ' + team);
@@ -157,12 +157,12 @@ ScrapeAPI.seasonDraftResults = function (seasons) {
       if (!error && response.statusCode == 200) {
         var $ = cheerio.load(body);
         console.log(season + ' season draft');
-        $('#leagueDraftResults #leagueDraftResultsResults .results .wrap > ul').each(function (j, e) {
+        $('#leagueDraftResults #leagueDraftResultsResults .results .wrap > ul').each(function (j, el) {
           var round = j += 1;
           console.log('Round ' + round);
-          var $picks = $(e).children('li');
-          $picks.each(function (k, e) {
-            var $pick = $(e);
+          var $picks = $(el).children('li');
+          $picks.each(function (k, el) {
+            var $pick = $(el);
             var pick = Number($pick.find('.count').text());
             var player = $pick.find('.playerName').text();
             var team = $pick.find('.teamName').text();
@@ -182,8 +182,8 @@ ScrapeAPI.owners = function (seasons) {
     request(that.baseUrl + '/' + season + '/owners', function (error, response, body) {
       if (!error && response.statusCode == 200) {
         var $ = cheerio.load(body);
-        $('#leagueOwners .tableWrap tbody tr').each(function (i, e) {
-          var $row = $(e);
+        $('#leagueOwners .tableWrap tbody tr').each(function (i, el) {
+          var $row = $(el);
           var owner = $row.find('.teamOwnerName').text();
           var ownerId = ($row.find('[class*="userId-"]').attr('class')).replace(/(\D)*/, '');
           var ownerTeamName = $row.find('.teamName').text();
@@ -216,10 +216,10 @@ ScrapeAPI.owners = function (seasons) {
       if (!error && response.statusCode == 200) {
         var tradeObj = {};
         var $ = cheerio.load(body);
-        $('#leagueTransactions .tableWrap tbody > [class*="transaction-trade-"]').each(function (i, e) {
-          var $row = $(e);
+        $('#leagueTransactions .tableWrap tbody > [class*="transaction-trade-"]').each(function (i, el) {
+          var $row = $(el);
           // ignore the dropped players for now, we're only interested in "status" 1 and 2
-          var tradeId = $(e).attr('class').match(/transaction-trade-(.*?)-[12]/);
+          var tradeId = $row.attr('class').match(/transaction-trade-(.*?)-[12]/);
 
           if (null === tradeId) {
             return;
