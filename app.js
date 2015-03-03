@@ -9,7 +9,8 @@ var cheerio = require('cheerio');
 /* We have to have a league ID for anything to work */
 var config = {
   leagueId: process.argv[2] || null,
-  methods: []
+  methods: [],
+  seasons: []
 };
 
 process.argv.forEach(function (arg, i) {
@@ -40,9 +41,13 @@ Scraper.prototype.getSeasons = function () {
           var year = parseInt($(e).text());
           that.seasons.push(year);
         });
-        resolve(that.seasons);
+        if (that.seasons.length === 0) {
+          reject(Error('No seasons to scrape'));
+        } else {
+          resolve(that.seasons);
+        }
       } else {
-        reject(Error('Not found'));
+        reject(Error('Could not access page: ' + error));
       }
     });
   });
