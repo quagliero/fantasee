@@ -42,7 +42,7 @@ describe('Scraper', function () {
     });
 
     it('should default the base url if not supplied', function () {
-      var x = new Scraper({leagueId: 874089});
+      var x = new Scraper({leagueId: 12345});
       expect(x.baseUrl).to.equal('http://fantasy.nfl.com/league/' + x.leagueId + '/history');
     });
 
