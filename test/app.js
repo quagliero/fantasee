@@ -7,6 +7,7 @@ var expect = chai.expect;
 var s;
 
 chai.use(sinonChai);
+process.env.NODE_ENV = 'test';
 
 describe('Scraper', function () {
 
@@ -93,6 +94,23 @@ describe('Scraper', function () {
       x.init();
       expect(getSeasons).to.have.been.called;
     });
+  });
+
+  describe('#getSeasons()', function () {
+    it('should exist', function () {
+      expect(s.getSeasons).to.be.a('function');
+    });
+
+    it('should respond when called', function () {
+      expect(s).to.respondTo('getSeasons');
+    });
+
+    it('should return an array of season(s) scraped from nfl.com', function () {
+      return s.getSeasons().then(function (season) {
+        expect(season).to.be.an('array');
+      });
+    });
+
   });
 
 });

@@ -4,6 +4,13 @@
 /* Dependencies */
 var request = require('request');
 var cheerio = require('cheerio');
+var env = process.env.NODE_ENV;
+
+function log(msg) {
+  if (env === 'dev') {
+    console.log(msg);
+  }
+}
 
 /* Required vars */
 /* We have to have a league ID for anything to work */
@@ -61,7 +68,7 @@ Scraper.prototype.init = function () {
     this.getSeasons().then(function (seasons) {
       that.fireScraper(seasons);
     }, function(err) {
-      console.log(err);
+        log(err);
     });
   }
 };
@@ -71,7 +78,7 @@ Scraper.prototype.fireScraper = function (seasons) {
 
   // If we've got no methods passed in, run everything cuz whaaa
   if (that.methodsToRun.length === 0) {
-    console.warn('No scrape methods supplied. Will run all.');
+    log('No scrape methods supplied. Will run all.');
     Object.keys(that.Scrape).forEach(function (key) {
       that.Scrape[key].call(that, seasons);
     });
@@ -98,7 +105,7 @@ ScrapeAPI.almanac = function () {
         var year = $row.find('.historySeason').text();
         var team = $row.find('.historyTeam .teamName').text();
         seasons.push(year);
-        console.log(year + ' Champion: ' + team);
+        log(year + ' Champion: ' + team);
       });
 
       $('#leagueHistoryAlmanac [class*="history-btw"]').each(function (i, el) {
@@ -107,7 +114,8 @@ ScrapeAPI.almanac = function () {
         var week = $row.find('.historyWeek').text();
         var team = $row.find('.historyTeam .teamName').text();
         var points = $row.find('.historyPts').text();
-        console.log(year + ' Weekly Points Winner: ' + team + ' with ' + points + ' points in week ' + week);
+
+        log(year + ' Weekly Points Winner: ' + team + ' with ' + points + ' points in week ' + week);
       });
 
       $('#leagueHistoryAlmanac [class*="history-bpw"]').each(function (i, el) {
@@ -118,7 +126,7 @@ ScrapeAPI.almanac = function () {
         var player = $row.find('.playerNameAndInfo .playerName').text();
         var posTeam = $row.find('.playerNameAndInfo em').text();
         var points = $row.find('.historyPts').text();
-        console.log(year + ' Weekly Player Points Winner: ' + team + ' with ' + player + ' (' + posTeam + ') with ' + points + ' points in week ' + week);
+        log(year + ' Weekly Player Points Winner: ' + team + ' with ' + player + ' (' + posTeam + ') with ' + points + ' points in week ' + week);
       });
 
       $('#leagueHistoryAlmanac [class*="history-bts"]').each(function (i, el) {
@@ -126,7 +134,8 @@ ScrapeAPI.almanac = function () {
         var year = $row.find('.historySeason').text();
         var team = $row.find('.historyTeam .teamName').text();
         var points = $row.find('.historyPts').text();
-        console.log(year + ' Season Points Winner: ' + team + ' with ' + points + ' points');
+
+        log(year + ' Season Points Winner: ' + team + ' with ' + points + ' points');
       });
     }
   });
@@ -138,12 +147,12 @@ ScrapeAPI.seasonStandings = function (seasons) {
       request(that.baseUrl + '/' + season + '/standings', function (error, response, body) {
         if (!error && response.statusCode == 200) {
           var $ = cheerio.load(body);
-          console.log(season + ' season');
+          log(season + ' season');
           $('#finalStandings #championResults .results li').each(function (i, el) {
             var $row = $(el);
             var pos = i += 1;
             var team = $row.find('.teamName').text();
-            console.log(pos + ' : ' + team);
+            log(pos + ' : ' + team);
           });
         }
     });
@@ -156,21 +165,21 @@ ScrapeAPI.seasonDraftResults = function (seasons) {
     request(that.baseUrl + '/' + season + '/draftresults?draftResultsDetail=0&draftResultsTab=round&draftResultsType=results', function (error, response, body) {
       if (!error && response.statusCode == 200) {
         var $ = cheerio.load(body);
-        console.log(season + ' season draft');
+        log(season + ' season draft');
         $('#leagueDraftResults #leagueDraftResultsResults .results .wrap > ul').each(function (j, el) {
           var round = j += 1;
-          console.log('Round ' + round);
+          log('Round ' + round);
           var $picks = $(el).children('li');
           $picks.each(function (k, el) {
             var $pick = $(el);
             var pick = Number($pick.find('.count').text());
             var player = $pick.find('.playerName').text();
             var team = $pick.find('.teamName').text();
-            console.log('Pick ' + pick + ': ' + player + ' TO ' + team);
+            log('Pick ' + pick + ': ' + player + ' TO ' + team);
           });
         });
       } else {
-        console.log(error);
+        log(error);
       }
     });
   });
@@ -187,7 +196,7 @@ ScrapeAPI.owners = function (seasons) {
           var owner = $row.find('.teamOwnerName').text();
           var ownerId = ($row.find('[class*="userId-"]').attr('class')).replace(/(\D)*/, '');
           var ownerTeamName = $row.find('.teamName').text();
-          console.log(owner + ' (' + ownerId + ') : ' + ownerTeamName);
+          log(owner + ' (' + ownerId + ') : ' + ownerTeamName);
         });
       }
     });
@@ -244,12 +253,12 @@ ScrapeAPI.owners = function (seasons) {
 
           tradeObj[tradeId].push(data);
         });
-        console.log(season);
+        log(season);
         for (var trade in tradeObj) {
           if (tradeObj.hasOwnProperty(trade)) {
             var team1 = tradeObj[trade][0];
             var team2 = tradeObj[trade][1];
-            console.log(trade + ': ' + team1.teamName + ' traded ' + team1.players.join(', ') + ' to ' + team2.teamName + ' for ' + team2.players.join(', ') + ' on ' + team1.date);
+            log(trade + ': ' + team1.teamName + ' traded ' + team1.players.join(', ') + ' to ' + team2.teamName + ' for ' + team2.players.join(', ') + ' on ' + team1.date);
           }
         }
 
