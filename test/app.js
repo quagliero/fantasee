@@ -105,7 +105,7 @@ describe('Scraper', function () {
       expect(s).to.respondTo('getSeasons');
     });
 
-    it('should return an array of season(s) scraped from nfl.com', function () {
+    it('should resolve an array of season(s) scraped from nfl.com', function () {
       return s.getSeasons().then(function (season) {
         expect(season).to.be.an('array');
       });

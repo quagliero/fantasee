@@ -43,6 +43,7 @@ Scraper.prototype.getSeasons = function () {
   return new Promise(function(resolve, reject) {
     request(that.baseUrl, function (error, response, body) {
       if (!error && response.statusCode == 200) {
+        that.seasons.length = 0; // clear existing seasons
         var $ = cheerio.load(body);
         $('#historySeasonNav .st-menu a[href]').each(function (i, el) {
           var year = parseInt($(el).text());
