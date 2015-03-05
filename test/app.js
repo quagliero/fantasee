@@ -110,7 +110,20 @@ describe('Scraper', function () {
         expect(season).to.be.an('array');
       });
     });
+  });
 
+  describe('#fireScraper()', function () {
+    it('should exist', function () {
+      expect(s.fireScraper).to.be.a('function');
+    });
+
+    it('should respond when called', function () {
+      expect(s).to.respondTo('fireScraper');
+    });
+
+    // it('should only run the Scrape methods from the options config', function () {
+    //   s.fireScraper(s.seasons);
+    // });
   });
 
 });

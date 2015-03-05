@@ -142,7 +142,7 @@ ScrapeAPI.almanac = function () {
   });
 };
 
-ScrapeAPI.seasonStandings = function (seasons) {
+ScrapeAPI.standings = function (seasons) {
   var that = this;
     seasons.forEach(function (season, i) {
       request(that.baseUrl + '/' + season + '/standings', function (error, response, body) {
@@ -160,7 +160,7 @@ ScrapeAPI.seasonStandings = function (seasons) {
   });
 };
 
-ScrapeAPI.seasonDraftResults = function (seasons) {
+ScrapeAPI.draft = function (seasons) {
   var that = this;
   seasons.forEach(function (season, i) {
     request(that.baseUrl + '/' + season + '/draftresults?draftResultsDetail=0&draftResultsTab=round&draftResultsType=results', function (error, response, body) {
@@ -224,8 +224,9 @@ ScrapeAPI.owners = function (seasons) {
   seasons.forEach(function (season, i) {
     request(that.baseUrl + '/' + season + '/transactions' + urlParams, function (error, response, body) {
       if (!error && response.statusCode == 200) {
-        var tradeObj = {};
         var $ = cheerio.load(body);
+        var tradeObj = {};
+
         $('#leagueTransactions .tableWrap tbody > [class*="transaction-trade-"]').each(function (i, el) {
           var $row = $(el);
           // ignore the dropped players for now, we're only interested in "status" 1 and 2
@@ -273,6 +274,49 @@ ScrapeAPI.owners = function (seasons) {
       }
     });
   });
+};
+
+
+ScrapeAPI.schedule = function (seasons, pagination) {
+  var that = this;
+  var urlParams = pagination || 'schedule?leagueId=' + that.leagueId + '&scheduleDetail=1&scheduleType=week&standingsTab=schedule';
+
+  seasons.forEach(function (season, i) {
+    request(that.baseUrl + '/' + season + '/' + urlParams, function (error, response, body) {
+      if (!error && response.statusCode == 200) {
+        var $ = cheerio.load(body);
+
+        var week = parseInt($('#scheduleSchedule .content ul.scheduleWeekNav .selected .title span').text());
+        var next = $('#scheduleSchedule .weekNav .ww-next a').attr('href');
+
+        var $matchups = $('#scheduleSchedule .content .scheduleContent .matchups .matchup');
+
+        $matchups.each(function (i, el) {
+          var $matchup = $(el);
+          var $team1 = $matchup.find('.teamWrap-1');
+          var $team2 = $matchup.find('.teamWrap-2');
+
+          var team1 = {
+            name: $team1.find('.teamName').text(),
+            score: $team1.find('.teamTotal').text()
+          };
+
+          var team2 = {
+            name: $team2.find('.teamName').text(),
+            score: $team2.find('.teamTotal').text()
+          };
+
+          log(season + ' - Week ' + week + ': ' + team1.name + ' ' + team1.score + ' - ' + team2.score + ' ' + team2.name);
+        });
+
+        if (undefined !== next) {
+          // we have a next week, recursion!
+          that.Scrape.schedule.call(that, [season], next);
+        }
+      }
+    });
+  });
+
 };
 
 Scraper.prototype.Scrape = ScrapeAPI;
