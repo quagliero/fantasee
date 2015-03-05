@@ -84,15 +84,16 @@ describe('Scraper', function () {
       expect(s).to.respondTo('init');
     });
 
-    it('should call the #fireScraper method if we have seasons', function () {
+    it('should call the #getSeasons method', function (done) {
       s.init();
-      expect(fireScraper).to.have.been.called;
+      expect(getSeasons).to.have.been.called;
+      done();
     });
 
-    it('should call the #getSeasons method if we have no seasons', function () {
-      var x = new Scraper({leagueId: 874089});
-      x.init();
-      expect(getSeasons).to.have.been.called;
+    it('should call the #fireScraper method if we have seasons', function (done) {
+      s.init();
+      expect(fireScraper).to.have.been.called;
+      done();
     });
   });
 
@@ -105,9 +106,17 @@ describe('Scraper', function () {
       expect(s).to.respondTo('getSeasons');
     });
 
-    it('should resolve an array of season(s) scraped from nfl.com', function () {
+    it('should resolve an array of seasons from the config', function () {
       return s.getSeasons().then(function (season) {
         expect(season).to.be.an('array');
+      });
+    });
+
+    it('should resolve an array of seasons from scraping nfl.com if none supplied', function (done) {
+      var x = new Scraper({leagueId: 874089});
+      return x.getSeasons().then(function (season) {
+        expect(season).to.be.an('array');
+        done();
       });
     });
   });
@@ -121,9 +130,11 @@ describe('Scraper', function () {
       expect(s).to.respondTo('fireScraper');
     });
 
-    // it('should only run the Scrape methods from the options config', function () {
-    //   s.fireScraper(s.seasons);
-    // });
+    it('should throw an error when there are no seasons supplied', function () {
+      var x = new Scraper({leagueId: 874089});
+      var y = function() { x.fireScraper(); };
+      expect(y).to.throw(Error);
+    });
   });
 
 });

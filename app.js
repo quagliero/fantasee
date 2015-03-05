@@ -38,8 +38,54 @@ var Scraper = function(config) {
   this.seasons = config.seasons || [];
 };
 
+
+Scraper.prototype.init = function () {
+  var that = this;
+  this.getSeasons().then(function (seasons) {
+    that.fireScraper(seasons);
+  }, function(err) {
+    log(err);
+  });
+};
+
+Scraper.prototype.fireScraper = function (seasons) {
+  var that = this;
+
+  if (!seasons) {
+    throw new Error('No seasons to scrape');
+  }
+  // If we've got no methods passed in, run everything cuz whaaa
+  if (that.methodsToRun.length === 0) {
+    log('No scrape methods supplied. Will run all.');
+    Object.keys(that.Scrape).forEach(function (key) {
+      that.Scrape[key].call(that, seasons);
+    });
+  } else {
+    that.methodsToRun.forEach(function (method) {
+      if(that.Scrape[method] && typeof that.Scrape[method] === 'function') {
+        that.Scrape[method].call(that, seasons);
+      }
+    });
+  }
+};
+
 Scraper.prototype.getSeasons = function () {
   var that = this;
+
+  return new Promise(function(resolve, reject) {
+    if (that.seasons.length > 0) {
+      resolve(that.seasons);
+    } else {
+      resolve(that.Scrape.seasons.call(that));
+    }
+  });
+};
+
+var ScrapeAPI = {};
+
+ScrapeAPI.seasons = function () {
+  var that = this;
+
   return new Promise(function(resolve, reject) {
     request(that.baseUrl, function (error, response, body) {
       if (!error && response.statusCode == 200) {
@@ -60,39 +106,6 @@ Scraper.prototype.getSeasons = function () {
     });
   });
 };
-
-Scraper.prototype.init = function () {
-  var that = this;
-  if (this.seasons.length > 0) {
-    this.fireScraper(that.seasons);
-  } else {
-    this.getSeasons().then(function (seasons) {
-      that.fireScraper(seasons);
-    }, function(err) {
-        log(err);
-    });
-  }
-};
-
-Scraper.prototype.fireScraper = function (seasons) {
-  var that = this;
-
-  // If we've got no methods passed in, run everything cuz whaaa
-  if (that.methodsToRun.length === 0) {
-    log('No scrape methods supplied. Will run all.');
-    Object.keys(that.Scrape).forEach(function (key) {
-      that.Scrape[key].call(that, seasons);
-    });
-  } else {
-    that.methodsToRun.forEach(function (method) {
-      if(that.Scrape[method] && typeof that.Scrape[method] === 'function') {
-        that.Scrape[method].call(that, seasons);
-      }
-    });
-  }
-};
-
-var ScrapeAPI = {};
 
 ScrapeAPI.almanac = function () {
   var that = this;
@@ -287,27 +300,19 @@ ScrapeAPI.schedule = function (seasons, pagination) {
         var $ = cheerio.load(body);
 
         var week = parseInt($('#scheduleSchedule .content ul.scheduleWeekNav .selected .title span').text());
-        var next = $('#scheduleSchedule .weekNav .ww-next a').attr('href');
 
         var $matchups = $('#scheduleSchedule .content .scheduleContent .matchups .matchup');
 
         $matchups.each(function (i, el) {
           var $matchup = $(el);
-          var $team1 = $matchup.find('.teamWrap-1');
-          var $team2 = $matchup.find('.teamWrap-2');
-
-          var team1 = {
-            name: $team1.find('.teamName').text(),
-            score: $team1.find('.teamTotal').text()
-          };
-
-          var team2 = {
-            name: $team2.find('.teamName').text(),
-            score: $team2.find('.teamTotal').text()
-          };
+          var team1 = buildTeam($matchup, 1);
+          var team2 = buildTeam($matchup, 2);
 
           log(season + ' - Week ' + week + ': ' + team1.name + ' ' + team1.score + ' - ' + team2.score + ' ' + team2.name);
         });
+
+        // next week
+        var next = $('#scheduleSchedule .weekNav .ww-next a').attr('href');
 
         if (undefined !== next) {
           // we have a next week, recursion!
@@ -318,6 +323,17 @@ ScrapeAPI.schedule = function (seasons, pagination) {
   });
 
 };
+
+// helpers and utils
+function buildTeam($matchup, team) {
+  var $team = $matchup.find('.teamWrap-' + team);
+  return {
+    name: $team.find('.teamName').text(),
+    score: $team.find('.teamTotal').text()
+  };
+}
+
+
 
 Scraper.prototype.Scrape = ScrapeAPI;
 module.exports = Scraper;
