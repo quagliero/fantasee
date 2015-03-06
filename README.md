@@ -17,6 +17,13 @@ Better to just suck it and see, right?
 - [ ] profit
 
 
-#####* Probably should start with something simple
-- [ ] Scrape basic [almanac](http://chumbo.league.fantasy.nfl.com/league/874089/history) page to a db
+#####* Probably should start with something like
+- [x] Scrape basic [almanac](http://chumbo.league.fantasy.nfl.com/league/874089/history) page
+- [x] Scrape managers
+- [x] Scrape trades
+- [x] Scrape schedule and results
+- [x] Scrape draft results
+- [x] Scrape standings
+- [ ] Create RESTful routes to post/put scraped data
+- [ ] Insert scraped data to a database
 - [ ] Display that data on a page
