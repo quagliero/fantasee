@@ -1,4 +1,4 @@
-# fantasee :football: 
+# :football: The data scraper for [Fantasee](https://github.com/quagliero/fantasee-app)
 [![Build Status](https://travis-ci.org/quagliero/fantasee.svg?branch=master)](https://travis-ci.org/quagliero/fantasee)
 #### See more from your fantasy league.
 
